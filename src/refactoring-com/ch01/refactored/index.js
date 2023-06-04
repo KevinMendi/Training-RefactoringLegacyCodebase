@@ -1,42 +1,45 @@
 const plays = require("../datasource/plays.json");
 const invoices = require("../datasource/invoices.json");
 
-function statement(invoices, plays) {
+function statement(invoice, plays) {
   const statementData = {};
-  return renderPlainText(statementData, invoices, plays);
+  statementData.customer = invoice.customer;
+  statementData.performances = invoice.performances.map(enrichPerformance);
+  statementData.totalAmount = totalAmount(statementData);
+  statementData.totalVolumeCredits = totalVolumeCredits(statementData);
+  return renderPlainText(statementData, plays);
 }
 
-function renderPlainText(data, invoices, plays){
-  let statementResult = "";
-  for (let invoice of invoices) {
-    let result = `Statement for ${invoice.customer}\n`;
+function enrichPerformance(aPerformance){
+  const result = Object.assign({}, aPerformance); //copy of the aPerformance object-- shallow copy
+  result.play = playFor(result);
+  result.amount = amountFor(result);
+  result.volumeCredits = volumeCreditsFor(result);
+  return result;
+}
 
-    for (let perf of invoice.performances) {
-      // print line for this order
-      result += ` ${playFor(perf).name}: ${usd(amountFor(perf) / 100)} (${perf.audience} seats)\n`;
-    }
+function playFor(aPerformance){
+  return plays[aPerformance.playID];
+}
 
-    result += `Amount owed is ${usd(totalAmount(invoice) / 100)}\n`;
-    result += `You earned ${totalVolumeCredits(invoice)} credits\n\n`;
-    statementResult += result;
+function renderPlainText(data, plays){
+  let result = `Statement for ${data.customer}\n`;
+  for(let perf of data.performances){
+    result += ` ${perf.play.name}: ${usd(perf.amount)} (${perf.audience} seats)\n`;
   }
-
-  return statementResult;
+  result += `Amount owed is ${usd(data.totalAmount)}\n`;
+  result += `You earned ${data.totalVolumeCredits} credits\n`;
+  return result;
 }
 
-function totalAmount(invoice) { 
-  let result = 0; 
-  for (let perf of invoice.performances) { 
-    result += amountFor(perf);
-   }
-
-   return result;
+function totalAmount(data) { 
+   return data.performances.reduce((total, p) => total + p.volumeCredits, 0);
 }
 
-function totalVolumeCredits(invoice){
+function totalVolumeCredits(data){
   let result = 0;
-    for (let perf of invoice.performances) {
-      result += volumeCreditsFor(perf);
+    for (let perf of data.performances) {
+      result += perf.volumeCredits;
     }
 
     return result;
@@ -53,20 +56,16 @@ function usd(aNumber){
 function volumeCreditsFor(aPerformance){
   let result = 0;
   result += Math.max(aPerformance.audience - 30, 0);
-  if(playFor(aPerformance).type ==="comedy"){
+  if(aPerformance.play.type ==="comedy"){
     result += Math.floor(aPerformance.audience / 5);
   }
 
   return result;
 }
 
-function playFor(aPerformance){
-  return plays[aPerformance.playID];
-}
-
 function amountFor(aPerformance){
     let result = 0;
-    switch (playFor(aPerformance).type) {
+    switch (aPerformance.play.type) {
         case "tragedy":
             result = 40000;
           if (aPerformance.audience > 30) {
@@ -81,7 +80,7 @@ function amountFor(aPerformance){
           result += 300 * aPerformance.audience;
           break;
         default:
-          throw new Error(`Unknown type: ${playFor(aPerformance).type}`);
+          throw new Error(`Unknown type: ${qPerformance.play.type}`);
       }
 
       return result;
