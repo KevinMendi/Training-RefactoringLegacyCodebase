@@ -1,5 +1,5 @@
-const plays = require("./plays.json");
-const invoices = require("./invoices.json");
+const plays = require("../datasource/plays.json");
+const invoices = require("../datasource/invoices.json");
 
 function statement(invoices, plays) {
   const format = new Intl.NumberFormat("en-US", {
