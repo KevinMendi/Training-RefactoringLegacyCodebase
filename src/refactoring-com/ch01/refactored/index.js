@@ -1,6 +1,6 @@
 const plays = require("../datasource/plays.json");
 const invoices = require("../datasource/invoices.json");
-const createStatementData = require("./createStatementData.js");
+import createStatementData from "./createStatementData.js";
 
 function statement(invoice, plays) {
   return renderPlainText(createStatementData(invoice, plays));
