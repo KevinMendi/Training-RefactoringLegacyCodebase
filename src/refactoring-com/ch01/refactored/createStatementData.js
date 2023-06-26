@@ -1,4 +1,4 @@
-export default function createStatementData(invoice, plays){
+function createStatementData(invoice, plays) {
   const result = {};
   result.customer = invoice.customer;
   result.performances = invoice.performances.map(enrichPerformance); // ??
@@ -6,57 +6,56 @@ export default function createStatementData(invoice, plays){
   result.totalVolumeCredits = totalVolumeCredits(result);
   return result;
 
-  function enrichPerformance(aPerformance){
-      const calculator = createPerformanceCalculator(aPerformance, playFor(aPerformance));
-      const result = Object.assign({}, aPerformance); //copy of the aPerformance object-- shallow copy
-      result.play = calculator.play;
-      result.amount = calculator.amount;
-      result.volumeCredits = calculator.volumeCredits;
-      return result;
+  function enrichPerformance(aPerformance) {
+    const calculator = createPerformanceCalculator(aPerformance, playFor(aPerformance));
+    const result = Object.assign({}, aPerformance); //copy of the aPerformance object-- shallow copy
+    result.play = calculator.play;
+    result.amount = calculator.amount;
+    result.volumeCredits = calculator.volumeCredits;
+    return result;
   }
-
-  function playFor(aPerformance){
+  
+  function playFor(aPerformance) {
     return plays[aPerformance.playID];
-  }
-
-  function totalAmount(data) { 
-    return data.performances
-      .reduce((total, p) => total + p.amount, 0);
-  }
-
- function totalVolumeCredits(data){
-    return data.performances
-      .reduce((total, p) => total + p.volumeCredits, 0);
   }
 }
 
-function createPerformanceCalculator(aPerformance, aPlay){
-  switch(aPlay.type){
-    case "tragedy": return new TragedyCalculator(aPerformance, aPlay);
-    case "comedy": return new ComedyCalculator(aPerformance, aPlay);
+function totalAmount(data) {
+  return data.performances.reduce((total, p) => total + p.amount, 0);
+}
+
+function totalVolumeCredits(data) {
+  return data.performances.reduce((total, p) => total + p.volumeCredits, 0);
+}
+
+function createPerformanceCalculator(aPerformance, aPlay) {
+  switch (aPlay.type) {
+    case "tragedy":
+      return new TragedyCalculator(aPerformance, aPlay);
+    case "comedy":
+      return new ComedyCalculator(aPerformance, aPlay);
     default:
       throw new Error(`Unknown type: ${aPlay.type}`);
   }
 }
 
-
-class PerformanceCalculator{
+class PerformanceCalculator {
   constructor(aPerformance, aPlay) {
     this.performance = aPerformance;
     this.play = aPlay;
   }
 
-  get amount(){
-    throw new Error('subclass responsibility');
+  get amount() {
+    throw new Error("subclass responsibility");
   }
 
-  get volumeCredits(){
-    return Math.max(this.performance.audience - 30, 0); 
+  get volumeCredits() {
+    return Math.max(this.performance.audience - 30, 0);
   }
 }
 
-class TragedyCalculator extends PerformanceCalculator{
-  get amount(){
+class TragedyCalculator extends PerformanceCalculator {
+  get amount() {
     let result = 4000;
     if (this.performance.audience > 30) {
       result += 1000 * (this.performance.audience - 30);
@@ -65,8 +64,8 @@ class TragedyCalculator extends PerformanceCalculator{
   }
 }
 
-class ComedyCalculator extends PerformanceCalculator{
-  get amount(){
+class ComedyCalculator extends PerformanceCalculator {
+  get amount() {
     let result = 30000;
     if (this.performance.audience > 20) {
       result += 10000 + 500 * (this.performance.audience - 20);
@@ -75,7 +74,11 @@ class ComedyCalculator extends PerformanceCalculator{
     return result;
   }
 
-  get volumeCredits(){
+  get volumeCredits() {
     return super.volumeCredits + Math.floor(this.performance.audience / 5);
   }
 }
+
+module.exports = {
+  createStatementData,
+};
