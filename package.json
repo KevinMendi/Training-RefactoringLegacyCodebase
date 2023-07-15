@@ -17,6 +17,9 @@
   },
   "homepage": "https://github.com/KevinMendi/Training-RefactoringLegacyCodebase#readme",
   "bin": {
-   "hello": "./bin/index.js"
- }
+    "hello": "./bin/index.js"
+  },
+  "devDependencies": {
+    "mocha": "^10.2.0"
+  }
 }
