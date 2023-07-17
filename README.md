@@ -251,3 +251,230 @@ find Extract Superclass (375) or Replace Type Code with Subclasses (362) (which 
 - A good time to use a comment is when you don’t know what to do. In addition to describing what is going on, comments can indicate areas in which you aren’t sure. A comment can also explain why you did something. This kind of information helps future modifiers, especially forgetful ones.
 
 
+
+**Chapter 4 - Building Tests**
+- Refactoring is a valuable tool, but it can’t come alone. To do refactoring properly, I need a solid suite of tests to spot my inevitable mistakes.
+- Make sure all tests are fully automatic and that they check their own results.
+- A suite of tests is a powerful bug detector that decapitates the time it takes to find bugs.
+- Always make sure a test will fail when it should.
+    - A way of doing that is to temporarily inject a fault into the code.
+- Run tests frequently. Run those exercising the code you’re working on at least every few minutes; run all tests at least daily.
+- It is better to write and run incomplete tests than not to run complete tests.
+- This is a common pattern. I take the initial standard fixture that’s set up by the beforeEach block, I exercise that fixture for the test, then I verify the fixture has done what I think it should have done.
+    - setup-­exercise-verify
+    - given­-when-­then
+    - arrange-­act­-assert
+- Think of the boundary conditions under which things might go wrong and concentrate your tests there.
+    - Play the part of an enemy to your code. Think about how you can break it.
+    - Be both productive and fun.
+- Don’t let the fear that testing can’t catch all bugs stop you from writing tests that catch most bugs. 
+    - I’m sure you have heard many times that you cannot prove that a program has no bugs by testing. That’s true, but it does not affect the ability of testing to speed up programming.
+- When you get a bug report, start by writing a unit test that exposes the bug.
+- How much testing is enough?”
+    - The best measure for a good enough test suite is subjective: How confident are you that if someone introduces a defect into the code, some test will fail? This isn’t something that can be objectively analyzed, and it doesn’t account for false confidence, but the aim of self­testing code is to get that confidence. If I can refactor my code and be pretty sure that I’ve not introduced a bug because my tests come back green—then I can be happy that I have good enough tests.
+
+
+**Chapter 5 - Introducing the Catalog**
+
+**Chapter 6 - A First Set of Refactorings**
+**EXTRACT FUNCTION**
+- Inverse of: Inline Function
+
+- Motivation: 
+    - look at a fragment of code, understand what it is doing, then extract it into its own function named after its purpose.
+    -  If you have to spend effort looking at a fragment of code and figuring out what it’s doing, then you should extract it into a function and name the function after the “what.” Then, when you read it again, the purpose of the function leaps right out at you, and most of the time you won’t need to care about how the function fulfills its purpose (which is the body of the function).
+    -  Any function with more than half­a­dozen lines of code starts to smell, and it’s not unusual for me to have functions that are a single line of code.
+    - Small functions  work if the names are good, so you need to pay good attention to naming. 
+    - Often, fragments of code in a larger function that start with a comment to say what they do. The comment is often a good hint for the name of the function when I extract that fragment.
+
+- Mechanics:
+    - Create a new function, and name it after the intent of the function (name it by what it does, not by how it does it)
+        - If I can’t come up with a more meaningful name, that’s a sign that I shouldn’t extract the code
+        - I don’t have to come up with the best name right away; sometimes a good name only appears as I work with the extraction.
+        - If the language supports nested functions, nest the extracted function inside the source function. That will reduce the amount of out­of­scope variables to deal with after the next couple of steps.
+    - Copy the extracted code from the source function into the new target function.
+    - Scan the extracted code for references to any variables that are local in scope to the source function and will not be in scope for the extracted function. Pass them as parameters.
+        - If a variable is only used inside the extracted code but is declared outside, move the declaration into the extracted code
+        - Any variables that are assigned to need more care if they are passed by value. If there’s only one of them, I try to treat the extracted code as a query and assign the result to the variable concerned.
+        - Sometimes, I find that too many local variables are being assigned by the extracted code. It’s better to abandon the extraction at this point. When this happens, I consider other refactorings such as Split Variable (240) or Replace Temp with Query (178) to simplify variable usage and revisit the extraction later
+    - Compile after all variables are dealt with.
+    - Replace the extracted code in the source function with a call to the target function.
+    - Look for other code that’s the same or similar to the code just extracted, and consider using Replace Inline Code with Function Call (222) to call the new function.
+
+- Sample Code Before:
+```
+function printOwing(invoice) {
+  printBanner();
+  let outstanding = calculateOutstanding();
+  // Print details
+  console.log(`name: ${invoice.customer}`);
+  console.log(`amount: ${outstanding}`);
+}
+```
+- Sample Code After:
+```
+function printOwing(invoice) {
+  printBanner();
+  let outstanding = calculateOutstanding();
+  printDetails(outstanding);
+
+  function printDetails(outstanding){
+    console.log(`name: ${invoice.customer}`);
+    console.log(`amount: ${outstanding}`);
+  }
+}
+```
+
+**INLINE FUNCTION**
+- Inverse of: Extract Function
+
+- Motivation: 
+    - the body is as clear as the name. Or, I refactor the body of the code into something that is just as clear as the name. When this happens, I get rid of the function.
+    - when I see code that’s using too much indirection— when it seems that every function does simple delegation to another function, and I get lost in all the delegation
+
+- Mechanics:
+    - Check that this isn’t a polymorphic method. If this is a method in a class, and has subclasses that override it, then I can’t inline it.
+    - Find all the callers of the function.
+    - Replace each call with the function’s body.
+    - Test after each replacement.
+        - The entire inlining doesn’t have to be done all at once. If some parts of the inline are tricky, they can be done gradually as opportunity permits.
+    - Remove the function definition.
+
+- Sample Code Before:
+```
+function getRating(driver) {
+  return moreThanFiveLateDeliveries(driver) ? 2 : 1;
+}
+
+function moreThanFiveLateDeliveries(driver) {
+  return driver.numberOfLateDeliveries > 5;
+}
+
+```
+
+- Sample Code After:
+```
+function getRating(driver) {
+  return (driver.numberOfLateDeliveries > 5) ? 2 : 1;
+}
+```
+
+**EXTRACT VARIABLE**
+- Inverse of: Inline Variable
+
+- Motivation: 
+    - Expressions can become very complex and hard to read. In such situations, local variables may help break the expression down into something more manageable. In particular, they give me an ability to name a part of a more complex piece of logic. This allows me to better understand the purpose of what’s happening
+- Mechanics:
+    - Ensure that the expression you want to extract does not have side effects.
+    - Declare an immutable variable. Set it to a copy of the expression you want to name.
+    - Replace the original expression with the new variable.
+    - Test.
+- Sample Code Before:
+```
+return order.quantity * order.itemPrice -
+  Math.max(0, order.quantity - 500) * order.itemPrice * 0.05 +
+  Math.min(order.quantity * order.itemPrice * 0.1, 100);
+
+```
+
+- Sample Code After:
+```
+const basePrice = order.quantity * order.itemPrice;
+const quantityDiscount = Math.max(0, order.quantity - 500) * order.itemPrice * 0.05;
+const shipping = Math.min(basePrice * 0.1, 100);
+
+return basePrice + quantityDiscount + shipping;
+
+```
+
+**INLINE VARIABLE**
+- Inverse of: Extract Variable
+
+- Motivation: 
+    - Variables provide names for expressions within a function, and as such they are usually a Good Thing. But sometimes, the name doesn’t really communicate more than the expression itself.
+
+- Mechanics:
+    - Check that the right­hand side of the assignment is free of side effects.
+    - If the variable isn’t already declared immutable, do so and test.
+    - Find the first reference to the variable and replace it with the right­hand side of the assignment.
+    - Test.
+    - Repeat replacing references to the variable until you’ve replaced all of them.
+    - Remove the declaration and assignment of the variable.
+    - Test.
+
+- Sample Code Before:
+``` 
+let basePrice = anOrder.basePrice;
+return (basePrice > 1000)
+```
+
+- Sample Code After:
+```
+return anOrder.baasePrice > 1000;
+```
+
+**CHANGE FUNCTION DECLARATION**
+- Inverse of: 
+
+- Motivation: 
+    - Function declarations represent how these parts fit together—effectively, they represent the joints in our software systems.
+    - Good joints allow me to add new parts to the system easily, but bad ones are a constant source of difficulty, making it harder to figure out what the software does and how to modify it as my needs change.
+    - A good name allows me to understand what the function does when I see it called, without seeing the code that defines its implementation.
+    - If I see a function with the wrong name, it is imperative that I change it as soon as I understand what a better name could be. That way, the next time I’m looking at this code, I don’t have to figure out again what’s going on.
+
+- Mechanics:
+    - If you’re removing a parameter, ensure it isn’t referenced in the body of the function
+    - Change the method declaration to the desired declaration.
+    - Find all references to the old method declaration, update them to the new one
+    - Test
+
+- Sample Code Before:
+```
+function circum(radius) 
+{ 
+    return circumference(radius); 
+}
+
+addReservation(customer) 
+{ 
+    this.zz_addReservation(customer, false); 
+}
+```
+
+- Sample Code After:
+```
+function circumference(radius) 
+{ 
+    return 2 * Math.PI * radius; 
+}
+
+zz_addReservation(customer, isPriority) 
+{ 
+    this._reservations.push(customer); 
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+- Inverse of: 
+
+- Motivation: 
+
+- Mechanics:
+
+- Sample Code Before:
+```
+```
+
+- Sample Code After:
+```
+```
