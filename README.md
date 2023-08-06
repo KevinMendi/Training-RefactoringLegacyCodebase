@@ -455,6 +455,198 @@ zz_addReservation(customer, isPriority)
 ```
 
 
+**ENCAPSULATE VARIABLE**
+- Inverse of: 
+
+- Motivation: 
+    - If I move data around, I have to change all the references to the data in a single cycle to keep the code working. For data with a very small scope of access, such as a temporary variable in a small function, this isn’t a problem. But as the scope grows, so does the difficulty, which is why global data is such a pain.
+    - The greater the scope of the data, the more important it is to encapsulate.
+
+- Mechanics:
+    - Create encapsulating functions to access and update the variable.
+    - Run static checks.
+    - For each reference to the variable, replace with a call to the appropriate encapsulating function. Test after each replacement.
+    - Restrict the visibility of the variable.
+    - Test.
+    - If the value of the variable is a record, consider Encapsulate Record (162).
+
+- Sample Code Before:
+```
+let defaultOwner = { firstName: "Martin", lastName: "Fowler" };
+
+```
+
+- Sample Code After:
+```
+let defaultOwnerData = { firstName: "Martin", lastName: "Fowler" };
+
+export function defaultOwner() {
+  return defaultOwnerData;
+}
+
+export function setDefaultOwner(arg) {
+  defaultOwnerData = arg;
+}
+
+```
+
+
+**RENAME VARIABLE**
+- Inverse of: 
+
+- Motivation: 
+    - Naming things well is the heart of clear programming. Variables can do a lot to explain what I’m up to—if I name them well.
+
+- Mechanics:
+    - If the variable is used widely, consider Encapsulate Variable (132).
+    - Find all references to the variable, and change every one.
+    - Test
+
+- Sample Code Before:
+```
+result += `<h1>${title()}</h1>`;
+setTitle(obj['articleTitle']);
+function title() {
+  return tpHd;
+}
+function setTitle(arg) {
+  tpHd = arg;
+}
+
+```
+
+- Sample Code After:
+```
+let _title = "untitled";
+function title() {
+  return _title;
+}
+function setTitle(arg) {
+  _title = arg;
+}
+
+```
+
+
+**INTRODUCE PARAMETER OBJECT**
+- Inverse of: 
+
+- Motivation: 
+    -  when I see groups of data items that regularly travel together, appearing in function after function. Such a group is a data clump, and I like to replace it with a single data structure.
+
+- Mechanics:
+    - If there isn’t a suitable structure already, create one.
+    - Test
+    - Use Change Function Declaration (124) to add a parameter for the new structure.
+    - Test
+    - Adjust each caller to pass in the correct instance of the new structure. Test after each one
+    - For each element of the new structure, replace the use of the original parameter with the element of the structure. Remove the parameter. Test.
+
+- Sample Code Before:
+```
+function amountInvoiced(startDate, endDate){...}
+function amountReceived(startDate, endDate){...}
+function amountOverdue(startDate, endDate){...}
+
+```
+
+- Sample Code After:
+```
+function amountInvoiced(aDateRange){...}
+function amountReceived(aDateRange){...}
+function amountOverdue(aDateRange){...}
+```
+
+**COMBINE FUNCTIONS INTO CLASS**
+- Inverse of: 
+
+- Motivation: 
+    - When I see a group of functions that operate closely together on a common body of data (usually passed as arguments to the function call), I see an opportunity to form a class.
+
+- Mechanics:
+    - Apply Encapsulate Record (162) to the common data record that the functions share.
+    - Take each function that uses the common record and use Move Function (198) to move it into the new class.
+    - Each bit of logic that manipulates the data can be extracted with Extract Function (106) and then moved into the new class.
+
+- Sample Code Before:
+```
+function base(aReading){...}
+function taxableCharge(aReading){...}
+function calculateBaseCharge(aReading){...}
+```
+
+- Sample Code After:
+```
+class Reading{
+    base(){...}
+    taxableCharge(){...}
+    calculateBaseCharge(){...}
+}
+```
+
+**COMBINE FUNCTIONS INTO TRANSFORM**
+- Inverse of: 
+
+- Motivation: 
+    - Software often involves feeding data into programs that calculate various derived information from it. These derived values may be needed in several places, and those calculations are often repeated wherever the derived data is used. I prefer to bring all of these derivations together, so I have a consistent place to find and update them and avoid any duplicate logic.
+
+- Mechanics:
+    - Create a transformation function that takes the record to be transformed and returns the same values.
+    - Pick some logic and move its body into the transform to create a new field in the record. Change the client code to access the new field.
+    - Test.
+    - Repeat for the other relevant functions.
+
+- Sample Code Before:
+```
+function base(aReading){...}
+function taxableCharge(aReading){...}
+```
+
+- Sample Code After:
+```
+function enrichReading(argReading){
+    const aReading = _.cloneDeep(argReading);
+    aReading.baseCharge = base(aReading);
+    aReading.taxableCharge = taxableCharge(aReading);
+    return aReading;
+}
+```
+
+
+**CHAPTER 7 - Encapsulation**
+**ENCAPSULATE RECORD**
+- Motivation: 
+    - I often favor objects over records for mutable data. With objects, I can hide what is stored and provide methods for all three values. The user of the object doesn’t need to know or care which is stored and which is calculated. This encapsulation also helps with renaming: I can rename the field while providing methods for both the new and the old names, gradually updating callers until they are all done.
+
+- Mechanics:
+    - Use Encapsulate Variable (132) on the variable holding the record.
+    - Replace the content of the variable with a simple class that wraps the record. Define an accessor inside this class that returns the raw record. Modify the functions that encapsulate the variable to use this accessor.
+    - Test
+    - Provide new functions that return the object rather than the raw record.
+    - For each user of the record, replace its use of a function that returns the record with a function that returns the object. Use an accessor on the object to get at the field data, creating that accessor if needed. Test after each change.
+    - Remove the class’s raw data accessor and the easily searchable functions that returned the raw record.
+    - Test
+    - If the fields of the record are themselves structures, consider using Encapsulate Record and Encapsulate Collection (170) recursively.
+
+- Sample Code Before:
+```
+organization = {name: "Acme Gooseberries", country: "GB"}
+```
+
+- Sample Code After:
+```
+class Organization{
+    constructor(data){
+        this._name = data.name;
+        this._country = data.country;
+    }
+
+    get name() {return this._name;}
+    set name(arg) {this._name = arg;}
+    get country() {return this._country;}
+    set country(arg) {this._country = arg;}
+}
+```
 
 
 
